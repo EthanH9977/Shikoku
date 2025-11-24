@@ -4,7 +4,6 @@ import TimelineItem from './components/TimelineItem';
 import BottomNav from './components/BottomNav';
 import EditModal from './components/EditModal';
 import InfoModal from './components/InfoModal';
-import GoogleDriveModal from './components/GoogleDriveModal'; // API Config Modal
 import UserModal from './components/UserModal';
 import FileSelectorModal from './components/FileSelectorModal';
 import SettingsModal from './components/SettingsModal';
@@ -12,19 +11,17 @@ import { INITIAL_ITINERARY } from './constants';
 import { ItineraryItem, DayItinerary, EventType } from './types';
 import { Plus, Loader2 } from 'lucide-react';
 import { 
-  initGoogleDrive, 
-  signInToGoogle, 
-  setupUserFolder, 
-  listFilesInFolder, 
+  loginAndListFiles,
   loadFromDrive, 
   saveToDrive,
   DriveFile
 } from './services/googleDriveService';
 
 const STORAGE_KEY = 'shikoku_travel_itinerary_v1';
+const USER_KEY = 'shikoku_travel_user';
 
 // App States
-type AppState = 'init' | 'config_drive' | 'select_user' | 'select_file' | 'loading_file' | 'ready';
+type AppState = 'select_user' | 'select_file' | 'loading_file' | 'ready';
 
 const App: React.FC = () => {
   // Data State
@@ -32,7 +29,7 @@ const App: React.FC = () => {
   const [currentDayId, setCurrentDayId] = useState<number>(1);
   
   // App Flow State
-  const [appState, setAppState] = useState<AppState>('init');
+  const [appState, setAppState] = useState<AppState>('select_user');
   
   // Drive State
   const [currentUser, setCurrentUser] = useState<string | null>(null);
@@ -42,60 +39,38 @@ const App: React.FC = () => {
   const [availableFiles, setAvailableFiles] = useState<DriveFile[]>([]);
   const [driveLoading, setDriveLoading] = useState(false);
 
-  // Modal states (Standard)
+  // Modal states
   const [editingItem, setEditingItem] = useState<ItineraryItem | null>(null);
   const [viewingItem, setViewingItem] = useState<ItineraryItem | null>(null);
   const [isAddingNew, setIsAddingNew] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // --- Initialization Flow ---
-
+  // --- Initialization ---
   useEffect(() => {
-    const checkConfig = async () => {
-      const clientId = localStorage.getItem('gdrive_client_id');
-      const apiKey = localStorage.getItem('gdrive_api_key');
-
-      if (clientId && apiKey) {
-        try {
-          // Attempt silent init with saved credentials
-          await initGoogleDrive({ clientId, apiKey });
-          // Config exists, go to user selection (will trigger login if needed)
-          setAppState('select_user');
-        } catch (e) {
-          console.error("Auto-init failed", e);
-          // If init fails (e.g. key changed or origin mismatch), force re-config
-          setAppState('config_drive');
-        }
-      } else {
-        setAppState('config_drive');
-      }
-    };
-    checkConfig();
+    // Check if we have a cached user
+    const cachedUser = localStorage.getItem(USER_KEY);
+    if (cachedUser) {
+        handleUserLogin(cachedUser);
+    }
   }, []);
-
-  // --- Actions ---
-
-  const handleConfigSuccess = async () => {
-    setAppState('select_user');
-  };
 
   const handleUserLogin = async (username: string) => {
     setDriveLoading(true);
+    setAppState('select_user'); // Ensure we are on a visible screen if loading takes time
     try {
-      await signInToGoogle(); // Ensure auth
-      const { userFolderId } = await setupUserFolder(username);
+      // Fetch user folder and files via Vercel API
+      const { userFolderId, files } = await loginAndListFiles(username);
       
       setCurrentUser(username);
       setUserFolderId(userFolderId);
-      
-      // Fetch files
-      const files = await listFilesInFolder(userFolderId);
       setAvailableFiles(files);
+      localStorage.setItem(USER_KEY, username);
+      
       setAppState('select_file');
     } catch (e) {
       console.error("Login failed", e);
-      alert("無法連接 Google Drive，請檢查網路或 API 設定");
+      alert("無法連接伺服器，請稍後再試 (請確保已設定服務帳號)");
     } finally {
       setDriveLoading(false);
     }
@@ -109,8 +84,6 @@ const App: React.FC = () => {
         setItinerary(data);
         setCurrentFileId(fileId);
         setCurrentFileName(fileName.replace('.json', ''));
-        // Save to local storage as cache
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
         setAppState('ready');
       } else {
         throw new Error("Invalid file format");
@@ -125,8 +98,8 @@ const App: React.FC = () => {
   const handleCreateFile = async (fileName: string) => {
     setDriveLoading(true);
     try {
-      // Create new file with Initial Data
-      const newFileId = await saveToDrive(INITIAL_ITINERARY, fileName, userFolderId!, null);
+      if (!userFolderId) throw new Error("No user folder");
+      const newFileId = await saveToDrive(INITIAL_ITINERARY, fileName, userFolderId, null);
       
       setItinerary(INITIAL_ITINERARY);
       setCurrentFileId(newFileId);
@@ -146,7 +119,6 @@ const App: React.FC = () => {
         return;
     }
     
-    // Optimistic UI update or a toast could go here
     const loadingToast = document.createElement('div');
     loadingToast.className = "fixed top-4 left-1/2 -translate-x-1/2 bg-stone-800 text-white px-4 py-2 rounded-full text-sm z-50 animate-in fade-in";
     loadingToast.innerText = "正在同步至 Google Drive...";
@@ -165,7 +137,7 @@ const App: React.FC = () => {
     }
   };
 
-  // --- Local Data Handlers (Legacy/Backup) ---
+  // --- Local Data Handlers ---
 
   const handleExport = () => {
     const dataStr = JSON.stringify(itinerary, null, 2);
@@ -191,7 +163,7 @@ const App: React.FC = () => {
           if (Array.isArray(parsed)) {
             if (window.confirm("這將會覆蓋您目前的行程資料，確定要匯入嗎？")) {
                setItinerary(parsed);
-               alert("行程匯入成功！記得執行雲端同步以儲存變更。");
+               alert("行程匯入成功！");
             }
           }
         } catch (error) {
@@ -238,10 +210,6 @@ const App: React.FC = () => {
     }));
     setEditingItem(null);
     setIsAddingNew(false);
-    // Auto-save to local cache
-    setTimeout(() => {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(itinerary));
-    }, 0);
   };
 
   const handleDeleteItem = (itemId: string) => {
@@ -256,26 +224,7 @@ const App: React.FC = () => {
     setIsAddingNew(false);
   };
 
-  // --- Render Views Based on State ---
-
-  if (appState === 'init') {
-    return (
-      <div className="min-h-screen bg-washi flex flex-col items-center justify-center text-shikoku-indigo">
-        <Loader2 className="animate-spin mb-4" size={48} />
-        <p className="font-serif font-bold text-xl">啟動中...</p>
-      </div>
-    );
-  }
-
-  if (appState === 'config_drive') {
-    return (
-      <GoogleDriveModal 
-        onClose={() => {}} // Can't close without config
-        currentData={null}
-        onDataLoaded={() => handleConfigSuccess()}
-      />
-    );
-  }
+  // --- Render Views ---
 
   if (appState === 'select_user') {
     return (
@@ -297,7 +246,10 @@ const App: React.FC = () => {
           onSelect={handleSelectFile}
           onCreate={handleCreateFile}
           isLoading={driveLoading}
-          onSwitchUser={() => setAppState('select_user')}
+          onSwitchUser={() => {
+              localStorage.removeItem(USER_KEY);
+              setAppState('select_user');
+          }}
         />
       </div>
     );
@@ -307,7 +259,7 @@ const App: React.FC = () => {
     return (
       <div className="min-h-screen bg-washi flex flex-col items-center justify-center text-shikoku-indigo">
         <Loader2 className="animate-spin mb-4" size={48} />
-        <p className="font-serif font-bold text-xl">正在準備您的旅程...</p>
+        <p className="font-serif font-bold text-xl">讀取雲端行程中...</p>
       </div>
     );
   }
@@ -323,7 +275,6 @@ const App: React.FC = () => {
         className="hidden" 
       />
 
-      {/* Hero Section */}
       <Hero 
         dayStr={currentDay.displayDate}
         region={currentDay.region}
@@ -333,10 +284,8 @@ const App: React.FC = () => {
         onOpenDrive={() => setShowSettings(true)}
       />
 
-      {/* Timeline Container */}
       <main className="max-w-xl mx-auto px-5 py-8 relative min-h-[50vh]">
         <div className="absolute left-[78px] top-6 bottom-6 w-[1px] bg-stone-300 border-l border-dashed border-stone-400 -z-10"></div>
-
         <div className="space-y-6">
           {currentDay.events.map((item, index) => (
             <TimelineItem 
@@ -347,26 +296,18 @@ const App: React.FC = () => {
               onShowDetails={setViewingItem}
             />
           ))}
-          
           {currentDay.events.length === 0 && (
             <div className="flex flex-col items-center justify-center py-16 text-stone-400 border-2 border-dashed border-stone-200 rounded-xl mx-4">
               <p className="font-serif mb-4 text-lg">本日尚無行程</p>
-              <button 
-                onClick={handleAddNewItem}
-                className="px-6 py-2 bg-white border border-stone-300 rounded-full text-sm hover:bg-stone-50 transition-colors shadow-sm font-medium"
-              >
+              <button onClick={handleAddNewItem} className="px-6 py-2 bg-white border border-stone-300 rounded-full text-sm hover:bg-stone-50 transition-colors shadow-sm font-medium">
                 點此新增
               </button>
             </div>
           )}
         </div>
-
         {currentDay.events.length > 0 && (
            <div className="flex justify-center mt-12 mb-4">
-             <button
-               onClick={handleAddNewItem}
-               className="group flex items-center gap-2 px-6 py-3 bg-shikoku-red text-white rounded-full shadow-lg shadow-red-900/20 hover:bg-red-700 hover:scale-105 transition-all duration-300 border-2 border-white/20"
-             >
+             <button onClick={handleAddNewItem} className="group flex items-center gap-2 px-6 py-3 bg-shikoku-red text-white rounded-full shadow-lg shadow-red-900/20 hover:bg-red-700 hover:scale-105 transition-all duration-300 border-2 border-white/20">
                <Plus size={20} className="group-hover:rotate-90 transition-transform duration-300" />
                <span className="font-serif font-bold text-sm tracking-widest">新增行程</span>
              </button>
@@ -374,32 +315,17 @@ const App: React.FC = () => {
         )}
       </main>
 
-      <BottomNav 
-        days={itinerary}
-        currentDayId={currentDayId}
-        onSelectDay={setCurrentDayId}
-      />
-
-      <EditModal 
-        item={editingItem} 
-        onClose={() => setEditingItem(null)} 
-        onSave={handleSaveItem} 
-        onDelete={handleDeleteItem}
-        isNew={isAddingNew}
-      />
-
-      <InfoModal 
-        item={viewingItem} 
-        onClose={() => setViewingItem(null)} 
-      />
-
+      <BottomNav days={itinerary} currentDayId={currentDayId} onSelectDay={setCurrentDayId} />
+      <EditModal item={editingItem} onClose={() => setEditingItem(null)} onSave={handleSaveItem} onDelete={handleDeleteItem} isNew={isAddingNew} />
+      <InfoModal item={viewingItem} onClose={() => setViewingItem(null)} />
+      
       {showSettings && (
         <SettingsModal 
           onClose={() => setShowSettings(false)}
           currentUser={currentUser}
           currentFileName={currentFileName}
-          onSwitchUser={() => { setShowSettings(false); setAppState('select_user'); }}
-          onSwitchFile={() => { setShowSettings(false); setAvailableFiles([]); handleUserLogin(currentUser!); }}
+          onSwitchUser={() => { setShowSettings(false); localStorage.removeItem(USER_KEY); setAppState('select_user'); }}
+          onSwitchFile={() => { setShowSettings(false); handleUserLogin(currentUser!); }}
           onSync={handleManualSync}
           onExport={handleExport}
           onImport={() => fileInputRef.current?.click()}
