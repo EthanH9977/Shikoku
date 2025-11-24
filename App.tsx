@@ -106,6 +106,7 @@ const App: React.FC = () => {
       // Generate blank itinerary based on user input
       const newItinerary = generateEmptyItinerary(days, startDate);
       
+      // Save it immediately to get an ID (Mock or Real)
       const newFileId = await saveToDrive(newItinerary, fileName, userFolderId, null);
       
       setItinerary(newItinerary);
@@ -132,12 +133,19 @@ const App: React.FC = () => {
     document.body.appendChild(loadingToast);
 
     try {
-        await saveToDrive(itinerary, currentFileName, userFolderId, currentFileId);
+        const newId = await saveToDrive(itinerary, currentFileName, userFolderId, currentFileId);
+        
+        // Critical: Update the file ID if it changed (e.g. from Mock to Real Cloud ID)
+        if (newId !== currentFileId) {
+            console.log(`File ID updated: ${currentFileId} -> ${newId}`);
+            setCurrentFileId(newId);
+        }
+
         loadingToast.innerText = "儲存成功！";
         loadingToast.className = "fixed top-4 left-1/2 -translate-x-1/2 bg-green-600 text-white px-4 py-2 rounded-full text-sm z-50";
-    } catch (e) {
+    } catch (e: any) {
         console.error(e);
-        loadingToast.innerText = "儲存失敗";
+        loadingToast.innerText = `儲存失敗: ${e.message}`;
         loadingToast.className = "fixed top-4 left-1/2 -translate-x-1/2 bg-red-600 text-white px-4 py-2 rounded-full text-sm z-50";
     } finally {
         setTimeout(() => document.body.removeChild(loadingToast), 2000);

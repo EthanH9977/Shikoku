@@ -6,9 +6,7 @@ const ROOT_FOLDER_NAME = 'TravelBook';
 // Helper: robust key cleaning for Vercel Env Vars
 const getCleanPrivateKey = (key) => {
   if (!key) return '';
-  // Remove wrapping quotes if present (common copy-paste error)
   let cleanKey = key.replace(/^"|"$/g, '');
-  // Fix escaped newlines
   cleanKey = cleanKey.replace(/\\n/g, '\n');
   return cleanKey;
 };
@@ -24,14 +22,10 @@ const auth = new google.auth.JWT(
 const drive = google.drive({ version: 'v3', auth });
 
 export default async function handler(req, res) {
-  // Allow CORS
   res.setHeader('Access-Control-Allow-Credentials', true);
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
-  res.setHeader(
-    'Access-Control-Allow-Headers',
-    'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version'
-  );
+  res.setHeader('Access-Control-Allow-Headers', 'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version');
 
   if (req.method === 'OPTIONS') {
     res.status(200).end();
@@ -60,6 +54,7 @@ export default async function handler(req, res) {
 
     // 2. Helper: Find or Create User Folder
     const getUserFolderId = async (rootId, user) => {
+      // STRICT CHECK: The folder MUST be inside the Root Folder
       const q = `name = '${user}' and '${rootId}' in parents and mimeType = 'application/vnd.google-apps.folder' and trashed = false`;
       const response = await drive.files.list({ 
         q, 
@@ -77,7 +72,7 @@ export default async function handler(req, res) {
         requestBody: {
           name: user,
           mimeType: 'application/vnd.google-apps.folder',
-          parents: [rootId]
+          parents: [rootId] // Strictly child of TravelBook
         },
         fields: 'id',
         supportsAllDrives: true
@@ -89,12 +84,10 @@ export default async function handler(req, res) {
 
     if (req.method === 'GET') {
       
-      // A. LIST Files for a User
       if (action === 'list' && username) {
         const rootId = await getRootId();
         
         if (!rootId) {
-            // Specific Error for Frontend
             return res.status(404).json({ 
                 error: 'ROOT_FOLDER_NOT_FOUND', 
                 serviceAccountEmail: process.env.GOOGLE_CLIENT_EMAIL 
@@ -116,7 +109,6 @@ export default async function handler(req, res) {
         });
       }
 
-      // B. GET Single File Content
       if (action === 'get' && fileId) {
         const fileRes = await drive.files.get({
           fileId: fileId,
@@ -128,7 +120,6 @@ export default async function handler(req, res) {
     }
 
     if (req.method === 'POST') {
-      // C. SAVE (Create or Update)
       const { data } = req.body; 
       
       if (!data) return res.status(400).json({ error: 'No data provided' });
@@ -137,7 +128,7 @@ export default async function handler(req, res) {
       if (fileId) {
         await drive.files.update({
           fileId: fileId,
-          requestBody: {}, // metadata updates if any
+          requestBody: {}, 
           media: {
             mimeType: 'application/json',
             body: JSON.stringify(data, null, 2)
@@ -174,10 +165,10 @@ export default async function handler(req, res) {
       }
     }
 
-    return res.status(400).json({ error: 'Invalid action or missing parameters' });
+    return res.status(400).json({ error: 'Invalid action' });
 
   } catch (error) {
     console.error('Drive API Error:', error);
-    return res.status(500).json({ error: error.message, stack: error.stack });
+    return res.status(500).json({ error: error.message });
   }
 }
