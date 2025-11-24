@@ -1,22 +1,18 @@
-import React, { useEffect, useState, useRef } from 'react';
-import { CloudSun, RefreshCw, Settings, Cloud, HardDrive } from 'lucide-react';
+
+import React, { useEffect, useState } from 'react';
+import { CloudSun, RefreshCw, Cloud, HardDrive } from 'lucide-react';
 import { fetchWeatherForLocation, WeatherResult } from '../services/geminiService';
 
 interface HeroProps {
   dayStr: string;
   region: string;
   dateStr: string;
-  onExport: () => void;
-  onImport: (file: File) => void;
-  onOpenDrive: () => void;
   isOfflineMode: boolean;
 }
 
-const Hero: React.FC<HeroProps> = ({ dayStr, region, dateStr, onExport, onImport, onOpenDrive, isOfflineMode }) => {
+const Hero: React.FC<HeroProps> = ({ dayStr, region, dateStr, isOfflineMode }) => {
   const [weather, setWeather] = useState<WeatherResult | null>(null);
   const [loading, setLoading] = useState(false);
-  const [showSettings, setShowSettings] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const getWeather = async () => {
     setLoading(true);
@@ -29,14 +25,6 @@ const Hero: React.FC<HeroProps> = ({ dayStr, region, dateStr, onExport, onImport
     getWeather();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [region, dateStr]);
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files.length > 0) {
-      onImport(e.target.files[0]);
-    }
-    if (fileInputRef.current) fileInputRef.current.value = '';
-    setShowSettings(false);
-  };
 
   // Parse region to remove english part for cleaner look
   const jpRegion = region.split(' ')[0];
@@ -100,11 +88,11 @@ const Hero: React.FC<HeroProps> = ({ dayStr, region, dateStr, onExport, onImport
         </div>
       </div>
 
-      {/* Bottom Bar: Advice + Status + Settings */}
+      {/* Bottom Bar: Advice + Status */}
       <div className="mt-3 pt-2 border-t border-white/10 flex items-center justify-between relative z-20">
         
         {/* Advice Text */}
-        <div className="flex items-start gap-1.5 opacity-80 max-w-[65%]">
+        <div className="flex items-start gap-1.5 opacity-80 max-w-[70%]">
             {weather?.advice && !loading ? (
                 <>
                     <span className="font-bold text-shikoku-gold text-[10px] shrink-0 mt-0.5">Tips</span>
@@ -115,65 +103,16 @@ const Hero: React.FC<HeroProps> = ({ dayStr, region, dateStr, onExport, onImport
             )}
         </div>
 
-        <div className="flex items-center gap-3">
-             {/* Connection Status Indicator */}
-            <div className={`flex items-center gap-1 px-2 py-0.5 rounded-full border text-[9px] font-bold ${
-                isOfflineMode 
-                ? 'bg-orange-500/20 text-orange-200 border-orange-500/30' 
-                : 'bg-emerald-500/20 text-emerald-200 border-emerald-500/30'
-            }`}>
-                {isOfflineMode ? <HardDrive size={10} /> : <Cloud size={10} />}
-                <span>{isOfflineMode ? 'Local' : 'Cloud'}</span>
-            </div>
-
-            {/* Settings Button */}
-            <div className="relative">
-                <button 
-                    onClick={() => setShowSettings(!showSettings)}
-                    className="w-6 h-6 flex items-center justify-center rounded-full text-indigo-200/50 hover:text-white hover:bg-white/10 transition-colors"
-                >
-                    <Settings size={14} />
-                </button>
-                
-                {/* Menu - Opens Upwards */}
-                {showSettings && (
-                    <div className="absolute bottom-full right-0 mb-2 bg-shikoku-paper text-shikoku-ink rounded-lg shadow-xl border border-stone-100 p-2 min-w-[160px] animate-in fade-in zoom-in-95 duration-100 flex flex-col gap-1 z-50">
-                        <button 
-                            onClick={() => { setShowSettings(false); onOpenDrive(); }}
-                            className="flex items-center gap-2 px-3 py-2 text-xs hover:bg-stone-100 rounded-md w-full text-left text-shikoku-indigo font-bold"
-                        >
-                            <Cloud size={14} />
-                            <span>設定與同步</span>
-                        </button>
-                        <hr className="border-stone-200 my-1" />
-                        <button 
-                            onClick={onExport}
-                            className="flex items-center gap-2 px-3 py-2 text-xs hover:bg-stone-100 rounded-md w-full text-left font-medium"
-                        >
-                            <span>匯出行程 (JSON)</span>
-                        </button>
-                        <button 
-                            onClick={() => fileInputRef.current?.click()}
-                            className="flex items-center gap-2 px-3 py-2 text-xs hover:bg-stone-100 rounded-md w-full text-left font-medium"
-                        >
-                            <span>讀取行程 (JSON)</span>
-                        </button>
-                        <input 
-                            type="file" 
-                            ref={fileInputRef} 
-                            onChange={handleFileChange} 
-                            accept=".json" 
-                            className="hidden" 
-                        />
-                    </div>
-                )}
-            </div>
+        {/* Connection Status Indicator */}
+        <div className={`flex items-center gap-1 px-2 py-0.5 rounded-full border text-[9px] font-bold ${
+            isOfflineMode 
+            ? 'bg-orange-500/20 text-orange-200 border-orange-500/30' 
+            : 'bg-emerald-500/20 text-emerald-200 border-emerald-500/30'
+        }`}>
+            {isOfflineMode ? <HardDrive size={10} /> : <Cloud size={10} />}
+            <span>{isOfflineMode ? 'Local' : 'Cloud'}</span>
         </div>
       </div>
-      
-      {showSettings && (
-          <div className="fixed inset-0 z-10" onClick={() => setShowSettings(false)}></div>
-      )}
     </div>
   );
 };

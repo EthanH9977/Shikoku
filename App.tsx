@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import Hero from './components/Hero';
 import TimelineItem from './components/TimelineItem';
@@ -6,7 +7,7 @@ import EditModal from './components/EditModal';
 import InfoModal from './components/InfoModal';
 import UserModal from './components/UserModal';
 import FileSelectorModal from './components/FileSelectorModal';
-import SettingsModal from './components/SettingsModal';
+import SettingsView from './components/SettingsView';
 import { INITIAL_ITINERARY } from './constants';
 import { ItineraryItem, DayItinerary, EventType } from './types';
 import { Plus, Loader2 } from 'lucide-react';
@@ -19,6 +20,7 @@ import {
 
 const STORAGE_KEY = 'shikoku_travel_itinerary_v1';
 const USER_KEY = 'shikoku_travel_user';
+const SETTINGS_DAY_ID = 0; // Special ID for the Settings Page
 
 // App States
 type AppState = 'select_user' | 'select_file' | 'loading_file' | 'ready';
@@ -44,7 +46,6 @@ const App: React.FC = () => {
   const [editingItem, setEditingItem] = useState<ItineraryItem | null>(null);
   const [viewingItem, setViewingItem] = useState<ItineraryItem | null>(null);
   const [isAddingNew, setIsAddingNew] = useState(false);
-  const [showSettings, setShowSettings] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // --- Initialization ---
@@ -253,6 +254,7 @@ const App: React.FC = () => {
               localStorage.removeItem(USER_KEY);
               setAppState('select_user');
           }}
+          isOfflineMode={isOfflineMode}
         />
       </div>
     );
@@ -269,7 +271,7 @@ const App: React.FC = () => {
 
   return (
     <div className="min-h-screen pb-32 font-sans text-shikoku-ink bg-washi bg-fixed">
-      {/* Hidden File Input for Import */}
+      {/* Hidden File Input for Import (Shared) */}
       <input 
         type="file" 
         ref={fileInputRef} 
@@ -278,63 +280,67 @@ const App: React.FC = () => {
         className="hidden" 
       />
 
-      <Hero 
-        dayStr={currentDay.displayDate}
-        region={currentDay.region}
-        dateStr={currentDay.dateStr}
-        onExport={handleExport}
-        onImport={() => fileInputRef.current?.click()}
-        onOpenDrive={() => setShowSettings(true)}
-        isOfflineMode={isOfflineMode}
-      />
-
-      <main className="max-w-xl mx-auto px-5 py-8 relative min-h-[50vh]">
-        <div className="absolute left-[78px] top-6 bottom-6 w-[1px] bg-stone-300 border-l border-dashed border-stone-400 -z-10"></div>
-        <div className="space-y-6">
-          {currentDay.events.map((item, index) => (
-            <TimelineItem 
-              key={item.id}
-              item={item}
-              isLast={index === currentDay.events.length - 1}
-              onEdit={(i) => { setEditingItem(i); setIsAddingNew(false); }}
-              onShowDetails={setViewingItem}
-            />
-          ))}
-          {currentDay.events.length === 0 && (
-            <div className="flex flex-col items-center justify-center py-16 text-stone-400 border-2 border-dashed border-stone-200 rounded-xl mx-4">
-              <p className="mb-4 text-lg">本日尚無行程</p>
-              <button onClick={handleAddNewItem} className="px-6 py-2 bg-white border border-stone-300 rounded-full text-sm hover:bg-stone-50 transition-colors shadow-sm font-medium">
-                點此新增
-              </button>
-            </div>
-          )}
-        </div>
-        {currentDay.events.length > 0 && (
-           <div className="flex justify-center mt-12 mb-4">
-             <button onClick={handleAddNewItem} className="group flex items-center gap-2 px-6 py-3 bg-shikoku-red text-white rounded-full shadow-lg shadow-red-900/20 hover:bg-red-700 hover:scale-105 transition-all duration-300 border-2 border-white/20">
-               <Plus size={20} className="group-hover:rotate-90 transition-transform duration-300" />
-               <span className="font-bold text-sm tracking-widest">新增行程</span>
-             </button>
-           </div>
-        )}
-      </main>
-
-      <BottomNav days={itinerary} currentDayId={currentDayId} onSelectDay={setCurrentDayId} />
-      <EditModal item={editingItem} onClose={() => setEditingItem(null)} onSave={handleSaveItem} onDelete={handleDeleteItem} isNew={isAddingNew} />
-      <InfoModal item={viewingItem} onClose={() => setViewingItem(null)} />
-      
-      {showSettings && (
-        <SettingsModal 
-          onClose={() => setShowSettings(false)}
+      {currentDayId === SETTINGS_DAY_ID ? (
+        // --- Settings Page View ---
+        <SettingsView 
           currentUser={currentUser}
           currentFileName={currentFileName}
-          onSwitchUser={() => { setShowSettings(false); localStorage.removeItem(USER_KEY); setAppState('select_user'); }}
-          onSwitchFile={() => { setShowSettings(false); handleUserLogin(currentUser!); }}
+          onSwitchUser={() => { localStorage.removeItem(USER_KEY); setAppState('select_user'); }}
+          onSwitchFile={() => { handleUserLogin(currentUser!); }}
           onSync={handleManualSync}
           onExport={handleExport}
           onImport={() => fileInputRef.current?.click()}
+          isOfflineMode={isOfflineMode}
         />
+      ) : (
+        // --- Normal Timeline View ---
+        <>
+          <Hero 
+            dayStr={currentDay.displayDate}
+            region={currentDay.region}
+            dateStr={currentDay.dateStr}
+            isOfflineMode={isOfflineMode}
+          />
+
+          <main className="max-w-xl mx-auto px-5 py-8 relative min-h-[50vh]">
+            <div className="absolute left-[78px] top-6 bottom-6 w-[1px] bg-stone-300 border-l border-dashed border-stone-400 -z-10"></div>
+            <div className="space-y-6">
+              {currentDay.events.map((item, index) => (
+                <TimelineItem 
+                  key={item.id}
+                  item={item}
+                  isLast={index === currentDay.events.length - 1}
+                  onEdit={(i) => { setEditingItem(i); setIsAddingNew(false); }}
+                  onShowDetails={setViewingItem}
+                />
+              ))}
+              {currentDay.events.length === 0 && (
+                <div className="flex flex-col items-center justify-center py-16 text-stone-400 border-2 border-dashed border-stone-200 rounded-xl mx-4">
+                  <p className="mb-4 text-lg">本日尚無行程</p>
+                  <button onClick={handleAddNewItem} className="px-6 py-2 bg-white border border-stone-300 rounded-full text-sm hover:bg-stone-50 transition-colors shadow-sm font-medium">
+                    點此新增
+                  </button>
+                </div>
+              )}
+            </div>
+            {currentDay.events.length > 0 && (
+              <div className="flex justify-center mt-12 mb-4">
+                <button onClick={handleAddNewItem} className="group flex items-center gap-2 px-6 py-3 bg-shikoku-red text-white rounded-full shadow-lg shadow-red-900/20 hover:bg-red-700 hover:scale-105 transition-all duration-300 border-2 border-white/20">
+                  <Plus size={20} className="group-hover:rotate-90 transition-transform duration-300" />
+                  <span className="font-bold text-sm tracking-widest">新增行程</span>
+                </button>
+              </div>
+            )}
+          </main>
+        </>
       )}
+
+      {/* Global Bottom Navigation */}
+      <BottomNav days={itinerary} currentDayId={currentDayId} onSelectDay={setCurrentDayId} />
+      
+      {/* Modals are global */}
+      <EditModal item={editingItem} onClose={() => setEditingItem(null)} onSave={handleSaveItem} onDelete={handleDeleteItem} isNew={isAddingNew} />
+      <InfoModal item={viewingItem} onClose={() => setViewingItem(null)} />
     </div>
   );
 };

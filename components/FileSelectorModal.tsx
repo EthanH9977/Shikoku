@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { FileText, Plus, Loader2, Calendar } from 'lucide-react';
+import { FileText, Plus, Loader2, Calendar, HardDrive } from 'lucide-react';
 import { DriveFile } from '../services/googleDriveService';
 
 interface FileSelectorModalProps {
@@ -9,6 +9,7 @@ interface FileSelectorModalProps {
   onCreate: (fileName: string) => void;
   isLoading: boolean;
   onSwitchUser: () => void;
+  isOfflineMode: boolean;
 }
 
 const FileSelectorModal: React.FC<FileSelectorModalProps> = ({ 
@@ -17,7 +18,8 @@ const FileSelectorModal: React.FC<FileSelectorModalProps> = ({
   onSelect, 
   onCreate, 
   isLoading,
-  onSwitchUser 
+  onSwitchUser,
+  isOfflineMode
 }) => {
   const [newFileName, setNewFileName] = useState('');
   const [isCreating, setIsCreating] = useState(false);
@@ -34,11 +36,19 @@ const FileSelectorModal: React.FC<FileSelectorModalProps> = ({
       <div className="w-full max-w-md bg-white rounded-2xl shadow-2xl overflow-hidden border border-stone-100 flex flex-col max-h-[85vh]">
         
         {/* Header */}
-        <div className="p-6 border-b border-stone-100 bg-stone-50/50">
-          <h2 className="text-xl font-bold text-shikoku-ink mb-1">
-            歡迎回來，<span className="text-shikoku-indigo">{username}</span>
-          </h2>
-          <p className="text-xs text-stone-500">請選擇您的行程表</p>
+        <div className="p-6 border-b border-stone-100 bg-stone-50/50 flex justify-between items-start">
+          <div>
+            <h2 className="text-xl font-bold text-shikoku-ink mb-1">
+              歡迎回來，<span className="text-shikoku-indigo">{username}</span>
+            </h2>
+            <p className="text-xs text-stone-500">請選擇您的行程表</p>
+          </div>
+          {isOfflineMode && (
+            <div className="bg-orange-100 text-orange-600 px-2 py-1 rounded-lg flex items-center gap-1 shadow-sm border border-orange-200">
+              <HardDrive size={14} />
+              <span className="text-[10px] font-bold">本地模式</span>
+            </div>
+          )}
         </div>
 
         {/* File List */}
