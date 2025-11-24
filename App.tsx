@@ -58,11 +58,13 @@ const App: React.FC = () => {
 
       if (clientId && apiKey) {
         try {
+          // Attempt silent init with saved credentials
           await initGoogleDrive({ clientId, apiKey });
           // Config exists, go to user selection (will trigger login if needed)
           setAppState('select_user');
         } catch (e) {
           console.error("Auto-init failed", e);
+          // If init fails (e.g. key changed or origin mismatch), force re-config
           setAppState('config_drive');
         }
       } else {
@@ -255,6 +257,15 @@ const App: React.FC = () => {
   };
 
   // --- Render Views Based on State ---
+
+  if (appState === 'init') {
+    return (
+      <div className="min-h-screen bg-washi flex flex-col items-center justify-center text-shikoku-indigo">
+        <Loader2 className="animate-spin mb-4" size={48} />
+        <p className="font-serif font-bold text-xl">啟動中...</p>
+      </div>
+    );
+  }
 
   if (appState === 'config_drive') {
     return (

@@ -8,8 +8,6 @@ declare global {
 }
 
 const SCOPES = 'https://www.googleapis.com/auth/drive.file';
-// Using the v3 discovery URL
-const DISCOVERY_DOC = 'https://www.googleapis.com/discovery/v1/apis/drive/v3/rest';
 const ROOT_FOLDER_NAME = 'TravelBook';
 
 export interface GoogleDriveConfig {
@@ -28,15 +26,18 @@ let gisInited = false;
 
 // Helper: Wait for Google Scripts to be available in window
 const waitForGoogleScripts = () => {
-  return new Promise<void>((resolve) => {
+  return new Promise<void>((resolve, reject) => {
+    let attempts = 0;
     const interval = setInterval(() => {
+      attempts++;
       if (typeof window !== 'undefined' && window.gapi && window.google) {
         clearInterval(interval);
         resolve();
+      } else if (attempts > 50) { // 5 seconds
+        clearInterval(interval);
+        reject(new Error('Google API scripts load timeout'));
       }
     }, 100);
-    // Timeout after 5 seconds to avoid infinite loop, though app might fail
-    setTimeout(() => clearInterval(interval), 5000);
   });
 };
 
@@ -51,18 +52,18 @@ export const initGoogleDrive = async (config: GoogleDriveConfig): Promise<void> 
     window.gapi.load('client', async () => {
       try {
         // 1. Initialize gapi client with API Key ONLY
-        // DO NOT pass discoveryDocs here to avoid "missing required fields" error
         await window.gapi.client.init({
           apiKey: config.apiKey,
+          // discoveryDocs is intentionally omitted to prevent "missing required fields" error on cross-origin
         });
 
-        // 2. Manually load the Drive API
-        // This is more robust against discovery errors
+        // 2. Manually load the Drive API using shorthand
+        // This is the most robust way across different environments (localhost vs vercel)
         try {
-          await window.gapi.client.load(DISCOVERY_DOC);
-        } catch (loadError) {
-          console.warn('Failed to load discovery doc directly, trying shorthand...', loadError);
           await window.gapi.client.load('drive', 'v3');
+        } catch (loadError) {
+          console.error('Failed to load drive api', loadError);
+          throw new Error('Google Drive API module load failed');
         }
 
         gapiInited = true;
@@ -76,9 +77,15 @@ export const initGoogleDrive = async (config: GoogleDriveConfig): Promise<void> 
         gisInited = true;
 
         resolve();
-      } catch (err) {
+      } catch (err: any) {
         console.error('GAPI Init Error:', err);
-        reject(err);
+        // Identify origin mismatch for better UI feedback
+        if (err?.result?.error?.message?.includes('origin_mismatch') || 
+            err?.details?.includes('origin_mismatch')) {
+             reject(new Error('origin_mismatch'));
+        } else {
+             reject(err);
+        }
       }
     });
   });

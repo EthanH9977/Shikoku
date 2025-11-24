@@ -47,7 +47,13 @@ const GoogleDriveModal: React.FC<GoogleDriveModalProps> = ({ onClose, currentDat
       }, 800);
     } catch (error: any) {
       console.error(error);
-      setStatus({ type: 'error', msg: '登入失敗，請檢查 API 設定或網域授權' });
+      let errMsg = '登入失敗，請檢查 API 設定或網域授權';
+      
+      if (error?.message === 'origin_mismatch') {
+          errMsg = '網域未授權：請檢查上方的網址是否已加入 Google Console';
+      }
+
+      setStatus({ type: 'error', msg: errMsg });
     } finally {
       setLoading(false);
     }
