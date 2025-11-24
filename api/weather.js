@@ -76,23 +76,47 @@ export default async function handler(req, res) {
             return res.status(400).json({ error: 'Missing location or dateStr' });
         }
 
-        // Step 1: Try to get coordinates
+        // Step 1: Smart coordinate lookup
         let coords = null;
 
-        // Strategy A: Check hardcoded coordinates (fast, for common cities)
-        const cityParts = location.split(/[\s&]+/);
-        for (const part of cityParts) {
-            const cleanPart = part.toLowerCase().trim();
-            if (CITY_COORDINATES[cleanPart] || CITY_COORDINATES[part]) {
-                coords = CITY_COORDINATES[cleanPart] || CITY_COORDINATES[part];
-                break;
+        // Clean and normalize the location string
+        const normalizedLocation = location.toLowerCase().trim();
+
+        // Strategy A: Direct exact match (fastest)
+        if (CITY_COORDINATES[location] || CITY_COORDINATES[normalizedLocation]) {
+            coords = CITY_COORDINATES[location] || CITY_COORDINATES[normalizedLocation];
+        }
+
+        // Strategy B: Check each word/part separately
+        if (!coords) {
+            const parts = location.split(/[\s&/,、]+/); // Split by space, &, /, comma, 、
+            for (const part of parts) {
+                const cleanPart = part.trim();
+                if (CITY_COORDINATES[cleanPart] || CITY_COORDINATES[cleanPart.toLowerCase()]) {
+                    coords = CITY_COORDINATES[cleanPart] || CITY_COORDINATES[cleanPart.toLowerCase()];
+                    break;
+                }
             }
         }
 
-        // Strategy B: Use geocoding API (universal fallback)
+        // Strategy C: Fuzzy match - check if location contains any known city name
+        if (!coords) {
+            for (const [cityName, cityCoords] of Object.entries(CITY_COORDINATES)) {
+                if (normalizedLocation.includes(cityName.toLowerCase()) ||
+                    location.includes(cityName)) {
+                    coords = cityCoords;
+                    break;
+                }
+            }
+        }
+
+        // Strategy D: Use geocoding API (universal fallback)
         if (!coords) {
             try {
-                const searchTerm = cityParts[0]; // Use first part (usually the main city name)
+                // Try with the first meaningful part (usually the city name)
+                const parts = location.split(/[\s&/,、]+/);
+                const searchTerm = parts.find(p => p.trim().length > 1) || parts[0];
+
                 const geoResponse = await fetch(
                     `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(searchTerm)}&count=1&language=zh&format=json`
                 );
@@ -111,9 +135,9 @@ export default async function handler(req, res) {
             }
         }
 
-        // Fallback: Default coordinates if all else fails
+        // Fallback: Default to Tokyo if all strategies fail
         if (!coords) {
-            coords = { lat: 35.6762, lon: 139.6503 }; // Tokyo as last resort
+            coords = { lat: 35.6762, lon: 139.6503 };
         }
 
         const { lat, lon } = coords;
