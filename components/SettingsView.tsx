@@ -154,7 +154,7 @@ const SettingsView: React.FC<SettingsViewProps> = ({
       </section>
 
       <div className="mt-auto pt-8 pb-4 text-center">
-        <p className="text-[10px] text-stone-300 uppercase tracking-widest">Shikoku Travel Log v1.0</p>
+        <p className="text-[10px] text-stone-300 uppercase tracking-widest">JourneyX Book v1.0</p>
       </div>
     </div>
   );

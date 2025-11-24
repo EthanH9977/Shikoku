@@ -1,6 +1,6 @@
 {
-  "name": "四國遍路 | Shikoku Travel Log",
-  "description": "A smart travel itinerary app featuring a timeline interface, Google Maps integration, and AI-powered weather updates designed for Shikoku, Japan.",
+  "name": "JourneyX Book",
+  "description": "A smart, cloud-synced travel itinerary planner for any destination.",
   "requestFramePermissions": [
     "geolocation"
   ]

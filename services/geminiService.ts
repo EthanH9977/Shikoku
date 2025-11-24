@@ -23,7 +23,7 @@ const COORDINATES: Record<string, { lat: number; lng: number }> = {
 
 // Default historical data for February in Shikoku
 const HISTORICAL_DATA: Record<string, { temp: string; cond: string; advice: string }> = {
-  "default": { temp: "8°C", cond: "晴時多雲", advice: "二月四國仍有寒意，請準備保暖大衣。" },
+  "default": { temp: "--°C", cond: "晴時多雲", advice: "請隨時留意氣象變化，準備合適衣物。" },
   "高松": { temp: "9°C", cond: "晴朗", advice: "瀨戶內海氣候相對溫暖，海風稍大。" },
   "鳴門": { temp: "8°C", cond: "多雲", advice: "海邊風大，觀賞漩渦時請戴帽子。" },
   "祖谷": { temp: "4°C", cond: "陰有雪", advice: "山區氣溫極低，可能積雪，務必穿著羽絨衣。" },
