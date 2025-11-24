@@ -1,0 +1,130 @@
+import React, { useState } from 'react';
+import { FileText, Plus, Loader2, Calendar } from 'lucide-react';
+import { DriveFile } from '../services/googleDriveService';
+
+interface FileSelectorModalProps {
+  files: DriveFile[];
+  username: string;
+  onSelect: (fileId: string, fileName: string) => void;
+  onCreate: (fileName: string) => void;
+  isLoading: boolean;
+  onSwitchUser: () => void;
+}
+
+const FileSelectorModal: React.FC<FileSelectorModalProps> = ({ 
+  files, 
+  username, 
+  onSelect, 
+  onCreate, 
+  isLoading,
+  onSwitchUser 
+}) => {
+  const [newFileName, setNewFileName] = useState('');
+  const [isCreating, setIsCreating] = useState(false);
+
+  const handleCreate = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (newFileName.trim()) {
+      onCreate(newFileName.trim());
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-shikoku-paper/90 backdrop-blur-md animate-in fade-in duration-300">
+      <div className="w-full max-w-md bg-white rounded-2xl shadow-2xl overflow-hidden border border-stone-100 flex flex-col max-h-[85vh]">
+        
+        {/* Header */}
+        <div className="p-6 border-b border-stone-100 bg-stone-50/50">
+          <h2 className="text-xl font-serif font-bold text-shikoku-ink mb-1">
+            歡迎回來，<span className="text-shikoku-indigo">{username}</span>
+          </h2>
+          <p className="text-xs text-stone-500">請選擇您的行程表</p>
+        </div>
+
+        {/* File List */}
+        <div className="flex-1 overflow-y-auto p-4 space-y-3">
+          {isLoading ? (
+            <div className="flex flex-col items-center justify-center py-10 text-stone-400">
+              <Loader2 className="animate-spin mb-2" size={24} />
+              <span className="text-xs">讀取檔案中...</span>
+            </div>
+          ) : files.length === 0 ? (
+            <div className="text-center py-10 text-stone-400">
+              <FileText size={48} className="mx-auto mb-3 opacity-20" />
+              <p className="text-sm">尚未建立任何行程</p>
+            </div>
+          ) : (
+            files.map((file) => (
+              <button
+                key={file.id}
+                onClick={() => onSelect(file.id, file.name)}
+                className="w-full flex items-center p-4 bg-white border border-stone-200 rounded-xl hover:border-shikoku-indigo hover:shadow-md transition-all group text-left"
+              >
+                <div className="w-10 h-10 bg-indigo-50 text-shikoku-indigo rounded-full flex items-center justify-center mr-4 group-hover:bg-shikoku-indigo group-hover:text-white transition-colors">
+                  <Calendar size={20} />
+                </div>
+                <div>
+                  <h3 className="font-bold text-stone-800 group-hover:text-shikoku-indigo transition-colors">
+                    {file.name.replace('.json', '')}
+                  </h3>
+                  <p className="text-[10px] text-stone-400">點擊載入行程</p>
+                </div>
+              </button>
+            ))
+          )}
+        </div>
+
+        {/* Footer: Create New */}
+        <div className="p-4 border-t border-stone-100 bg-stone-50">
+          {!isCreating ? (
+            <div className="flex gap-3">
+              <button
+                onClick={onSwitchUser}
+                className="px-4 py-3 text-stone-500 text-sm font-bold hover:text-stone-800 transition-colors"
+              >
+                切換使用者
+              </button>
+              <button
+                onClick={() => setIsCreating(true)}
+                className="flex-1 py-3 bg-white border-2 border-dashed border-stone-300 text-stone-500 font-bold rounded-xl hover:border-shikoku-indigo hover:text-shikoku-indigo transition-all flex items-center justify-center gap-2"
+              >
+                <Plus size={18} />
+                <span>建立新行程</span>
+              </button>
+            </div>
+          ) : (
+            <form onSubmit={handleCreate} className="space-y-3 animate-in slide-in-from-bottom-2">
+              <label className="block text-xs font-bold text-stone-500 ml-1">新行程名稱</label>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={newFileName}
+                  onChange={(e) => setNewFileName(e.target.value)}
+                  placeholder="例如：四國環島 2026"
+                  autoFocus
+                  className="flex-1 p-3 bg-white border border-stone-300 rounded-xl text-sm font-bold focus:ring-2 focus:ring-shikoku-indigo outline-none"
+                />
+                <button
+                  type="submit"
+                  disabled={isLoading || !newFileName.trim()}
+                  className="px-4 bg-shikoku-indigo text-white rounded-xl hover:bg-indigo-800 transition-colors disabled:opacity-50"
+                >
+                  <Plus size={24} />
+                </button>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsCreating(false)}
+                className="w-full text-xs text-stone-400 hover:text-stone-600 py-2"
+              >
+                取消
+              </button>
+            </form>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default FileSelectorModal;

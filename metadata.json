@@ -1,0 +1,7 @@
+{
+  "name": "四國遍路 | Shikoku Travel Log",
+  "description": "A smart travel itinerary app featuring a timeline interface, Google Maps integration, and AI-powered weather updates designed for Shikoku, Japan.",
+  "requestFramePermissions": [
+    "geolocation"
+  ]
+}
