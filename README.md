@@ -4,7 +4,18 @@
 
 # Run and deploy your AI Studio app
 
-This contains everything you need to run your app locally.
+# Shikoku Travel Log
+
+A smart, cloud-synced travel itinerary planner.
+
+## 🚀 Vercel Deployment Setup (Important!)
+
+To make the Google Drive integration work, you must set the following **Environment Variables** in your Vercel Project Settings:
+
+1.  Go to **Settings** -> **Environment Variables**.
+2.  Add `GOOGLE_CLIENT_EMAIL`: The email from your Service Account JSON.
+3.  Add `GOOGLE_PRIVATE_KEY`: The private key from your Service Account JSON (copy the whole string including `-----BEGIN...`).
+4.  **Redeploy** your project for changes to take effect.
 
 View your app in AI Studio: https://ai.studio/apps/drive/1cUPNjM00FhoV7eIIvNfP_LR-6EPRMK8m
 
