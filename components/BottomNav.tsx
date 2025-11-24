@@ -42,7 +42,7 @@ const BottomNav: React.FC<BottomNavProps> = ({ days, currentDayId, onSelectDay }
                 `}
                 >
                 <span className="text-[8px] font-sans font-bold uppercase tracking-wider opacity-60 mb-0.5">Day</span>
-                <span className={`font-serif text-lg leading-none ${isActive ? 'font-bold' : 'font-medium'}`}>
+                <span className={`text-lg leading-none ${isActive ? 'font-bold' : 'font-medium'}`}>
                     {day.dayId}
                 </span>
                 

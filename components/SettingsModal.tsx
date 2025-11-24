@@ -29,7 +29,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
         onClick={(e) => e.stopPropagation()}
       >
         <div className="bg-shikoku-indigo p-4 flex justify-between items-center text-white">
-          <h3 className="font-bold text-lg font-serif">設定與管理</h3>
+          <h3 className="font-bold text-lg">設定與管理</h3>
           <button onClick={onClose} className="hover:bg-white/20 p-1 rounded-full transition-colors">
             <X size={20} />
           </button>

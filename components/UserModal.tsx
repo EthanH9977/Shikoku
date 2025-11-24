@@ -23,7 +23,7 @@ const UserModal: React.FC<UserModalProps> = ({ onConfirm, isLoading }) => {
           <div className="w-16 h-16 bg-white/10 rounded-full flex items-center justify-center mx-auto mb-4 backdrop-blur-sm">
             <User className="text-white" size={32} />
           </div>
-          <h2 className="text-2xl font-serif font-bold text-white tracking-wide">使用者登入</h2>
+          <h2 className="text-2xl font-bold text-white tracking-wide">使用者登入</h2>
           <p className="text-indigo-200 text-xs mt-2">建立或存取您的 TravelBook</p>
         </div>
 

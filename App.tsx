@@ -161,7 +161,7 @@ const App: React.FC = () => {
           const result = e.target?.result as string;
           const parsed = JSON.parse(result);
           if (Array.isArray(parsed)) {
-            if (window.confirm("這將會覆蓋您目前的行程資料，確定要匯入嗎？")) {
+            if (window.confirm("這將會覆蓋您目前的行程資料，確定要刪除嗎？")) {
                setItinerary(parsed);
                alert("行程匯入成功！");
             }
@@ -259,7 +259,7 @@ const App: React.FC = () => {
     return (
       <div className="min-h-screen bg-washi flex flex-col items-center justify-center text-shikoku-indigo">
         <Loader2 className="animate-spin mb-4" size={48} />
-        <p className="font-serif font-bold text-xl">讀取雲端行程中...</p>
+        <p className="font-bold text-xl">讀取雲端行程中...</p>
       </div>
     );
   }
@@ -298,7 +298,7 @@ const App: React.FC = () => {
           ))}
           {currentDay.events.length === 0 && (
             <div className="flex flex-col items-center justify-center py-16 text-stone-400 border-2 border-dashed border-stone-200 rounded-xl mx-4">
-              <p className="font-serif mb-4 text-lg">本日尚無行程</p>
+              <p className="mb-4 text-lg">本日尚無行程</p>
               <button onClick={handleAddNewItem} className="px-6 py-2 bg-white border border-stone-300 rounded-full text-sm hover:bg-stone-50 transition-colors shadow-sm font-medium">
                 點此新增
               </button>
@@ -309,7 +309,7 @@ const App: React.FC = () => {
            <div className="flex justify-center mt-12 mb-4">
              <button onClick={handleAddNewItem} className="group flex items-center gap-2 px-6 py-3 bg-shikoku-red text-white rounded-full shadow-lg shadow-red-900/20 hover:bg-red-700 hover:scale-105 transition-all duration-300 border-2 border-white/20">
                <Plus size={20} className="group-hover:rotate-90 transition-transform duration-300" />
-               <span className="font-serif font-bold text-sm tracking-widest">新增行程</span>
+               <span className="font-bold text-sm tracking-widest">新增行程</span>
              </button>
            </div>
         )}

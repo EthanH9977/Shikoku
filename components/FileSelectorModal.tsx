@@ -35,7 +35,7 @@ const FileSelectorModal: React.FC<FileSelectorModalProps> = ({
         
         {/* Header */}
         <div className="p-6 border-b border-stone-100 bg-stone-50/50">
-          <h2 className="text-xl font-serif font-bold text-shikoku-ink mb-1">
+          <h2 className="text-xl font-bold text-shikoku-ink mb-1">
             歡迎回來，<span className="text-shikoku-indigo">{username}</span>
           </h2>
           <p className="text-xs text-stone-500">請選擇您的行程表</p>
