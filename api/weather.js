@@ -142,26 +142,24 @@ export default async function handler(req, res) {
 
         const { lat, lon } = coords;
 
-        // Step 2: Get weather data
+        // Step 2: Get weather data with smart date handling
         const targetDate = new Date(dateStr);
         const today = new Date();
         today.setHours(0, 0, 0, 0);
         targetDate.setHours(0, 0, 0, 0);
-        const isFuture = targetDate >= today;
+
+        // Calculate days difference
+        const daysDiff = Math.floor((targetDate - today) / (1000 * 60 * 60 * 24));
 
         let weatherData;
+        let dataSource;
 
-        if (isFuture) {
-            const weatherResponse = await fetch(
-                `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&daily=temperature_2m_max,temperature_2m_min,weathercode&timezone=auto&forecast_days=16`
-            );
-
-            if (!weatherResponse.ok) {
-                throw new Error('Weather forecast failed');
-            }
-
-            weatherData = await weatherResponse.json();
-        } else {
+        // Logic:
+        // - Past dates: use historical data
+        // - Future 0-16 days: use forecast
+        // - Future >16 days: use last year's historical data as reference
+        if (daysDiff < 0) {
+            // Past date - use historical API
             const weatherResponse = await fetch(
                 `https://archive-api.open-meteo.com/v1/archive?latitude=${lat}&longitude=${lon}&start_date=${dateStr}&end_date=${dateStr}&daily=temperature_2m_max,temperature_2m_min,weathercode&timezone=auto`
             );
@@ -171,10 +169,43 @@ export default async function handler(req, res) {
             }
 
             weatherData = await weatherResponse.json();
+            dataSource = 'historical';
+        } else if (daysDiff <= 16) {
+            // 0-16 days future - use forecast API
+            const weatherResponse = await fetch(
+                `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&daily=temperature_2m_max,temperature_2m_min,weathercode&timezone=auto&forecast_days=16`
+            );
+
+            if (!weatherResponse.ok) {
+                throw new Error('Weather forecast failed');
+            }
+
+            weatherData = await weatherResponse.json();
+            dataSource = 'forecast';
+        } else {
+            // >16 days future - use last year's same date as reference
+            const lastYear = new Date(targetDate);
+            lastYear.setFullYear(lastYear.getFullYear() - 1);
+            const lastYearDate = lastYear.toISOString().split('T')[0];
+
+            const weatherResponse = await fetch(
+                `https://archive-api.open-meteo.com/v1/archive?latitude=${lat}&longitude=${lon}&start_date=${lastYearDate}&end_date=${lastYearDate}&daily=temperature_2m_max,temperature_2m_min,weathercode&timezone=auto`
+            );
+
+            if (!weatherResponse.ok) {
+                throw new Error('Reference weather failed');
+            }
+
+            weatherData = await weatherResponse.json();
+            dataSource = 'historical'; // Using historical as reference
         }
 
         // Parse weather data
-        const dateIndex = weatherData.daily.time.indexOf(dateStr);
+        const dateToFind = daysDiff > 16 ?
+            new Date(targetDate.getFullYear() - 1, targetDate.getMonth(), targetDate.getDate()).toISOString().split('T')[0] :
+            dateStr;
+
+        const dateIndex = weatherData.daily.time.indexOf(dateToFind);
 
         let tempMax, tempMin, weatherCode;
 
@@ -193,7 +224,7 @@ export default async function handler(req, res) {
             temperature: `${Math.round(tempMin)}°C - ${Math.round(tempMax)}°C`,
             condition: getWeatherCondition(weatherCode),
             advice: getWeatherAdvice(weatherCode, tempMax),
-            source: isFuture ? 'forecast' : 'historical'
+            source: dataSource
         });
 
     } catch (error) {
