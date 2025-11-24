@@ -30,6 +30,7 @@ const App: React.FC = () => {
   
   // App Flow State
   const [appState, setAppState] = useState<AppState>('select_user');
+  const [isOfflineMode, setIsOfflineMode] = useState(false);
   
   // Drive State
   const [currentUser, setCurrentUser] = useState<string | null>(null);
@@ -60,17 +61,19 @@ const App: React.FC = () => {
     setAppState('select_user'); // Ensure we are on a visible screen if loading takes time
     try {
       // Fetch user folder and files via Vercel API
-      const { userFolderId, files } = await loginAndListFiles(username);
+      const { userFolderId, files, isMock } = await loginAndListFiles(username);
       
+      setIsOfflineMode(isMock);
       setCurrentUser(username);
       setUserFolderId(userFolderId);
       setAvailableFiles(files);
       localStorage.setItem(USER_KEY, username);
       
       setAppState('select_file');
-    } catch (e) {
+    } catch (e: any) {
       console.error("Login failed", e);
-      alert("無法連接伺服器，請稍後再試 (請確保已設定服務帳號)");
+      // Even if fallback fails (rare), we alert
+      alert(`登入失敗: ${e.message}`);
     } finally {
       setDriveLoading(false);
     }
@@ -121,16 +124,16 @@ const App: React.FC = () => {
     
     const loadingToast = document.createElement('div');
     loadingToast.className = "fixed top-4 left-1/2 -translate-x-1/2 bg-stone-800 text-white px-4 py-2 rounded-full text-sm z-50 animate-in fade-in";
-    loadingToast.innerText = "正在同步至 Google Drive...";
+    loadingToast.innerText = isOfflineMode ? "正在儲存至本地..." : "正在同步至 Google Drive...";
     document.body.appendChild(loadingToast);
 
     try {
         await saveToDrive(itinerary, currentFileName, userFolderId, currentFileId);
-        loadingToast.innerText = "同步成功！";
+        loadingToast.innerText = "儲存成功！";
         loadingToast.className = "fixed top-4 left-1/2 -translate-x-1/2 bg-green-600 text-white px-4 py-2 rounded-full text-sm z-50";
     } catch (e) {
         console.error(e);
-        loadingToast.innerText = "同步失敗";
+        loadingToast.innerText = "儲存失敗";
         loadingToast.className = "fixed top-4 left-1/2 -translate-x-1/2 bg-red-600 text-white px-4 py-2 rounded-full text-sm z-50";
     } finally {
         setTimeout(() => document.body.removeChild(loadingToast), 2000);
@@ -282,6 +285,7 @@ const App: React.FC = () => {
         onExport={handleExport}
         onImport={() => fileInputRef.current?.click()}
         onOpenDrive={() => setShowSettings(true)}
+        isOfflineMode={isOfflineMode}
       />
 
       <main className="max-w-xl mx-auto px-5 py-8 relative min-h-[50vh]">
