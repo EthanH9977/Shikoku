@@ -77,16 +77,37 @@ export const loginAndListFiles = async (username: string): Promise<{ userFolderI
   try {
     const res = await fetch(`${API_BASE}?action=list&username=${encodeURIComponent(username)}`);
     
-    // Check for HTML response (Vercel 404/500 pages) or non-OK status
     const contentType = res.headers.get("content-type");
-    if (!res.ok || (contentType && contentType.includes("text/html"))) {
-       throw new Error(`API Error: ${res.status}`);
+    if (contentType && contentType.includes("application/json")) {
+        const data = await res.json();
+        
+        // Critical: Handle Root Folder Missing Error explicitly
+        if (!res.ok && data.error === 'ROOT_FOLDER_NOT_FOUND') {
+            throw new Error(`找不到 'TravelBook' 資料夾。\n\n請確認您已在 Google Drive 建立名稱為 'TravelBook' 的資料夾，並已將其「共用」給服務帳號：\n${data.serviceAccountEmail}\n\n權限請設為「編輯者」。`);
+        }
+        
+        // Handle other API errors
+        if (!res.ok) {
+            throw new Error(data.error || `API Error: ${res.status}`);
+        }
+        
+        return { ...data, isMock: false };
+    } else {
+        // HTML response usually means 404/500 from Vercel infrastructure itself
+        throw new Error(`Connection Error: ${res.status}`);
     }
 
-    const data = await res.json();
-    return { ...data, isMock: false };
-  } catch (err) {
-    console.warn('[Service] Backend API failed, falling back to LocalStorage Mock.', err);
+  } catch (err: any) {
+    console.warn('[Service] Backend API failed:', err);
+    
+    // If it's the specific ROOT_FOLDER error, re-throw it so the user sees the alert
+    // instead of silently mocking. This helps them fix the config.
+    if (err.message && err.message.includes('TravelBook')) {
+        throw err;
+    }
+
+    // Otherwise, fall back to mock
+    console.log('Falling back to LocalStorage Mock.');
     const mockData = await mockLoginAndListFiles(username);
     return { ...mockData, isMock: true };
   }
@@ -103,7 +124,6 @@ export const loadFromDrive = async (fileId: string): Promise<any> => {
     return await res.json();
   } catch (err) {
     console.error('Error loading file', err);
-    // If it was a real ID but fetch failed, we might want to alert the user
     throw err;
   }
 };
@@ -133,9 +153,7 @@ export const saveToDrive = async (data: any, fileName: string, parentFolderId: s
     const json = await res.json();
     return json.id;
   } catch (err) {
-    console.warn('[Service] Save failed, falling back to Mock for safety (User will strictly operate locally now).', err);
-    // Fallback: If API fails during save, we save to local mock to prevent data loss
-    // Note: This effectively "disconnects" the file from Drive, but saves the data locally.
+    console.warn('[Service] Save failed, falling back to Mock for safety.', err);
     return mockSaveFile(data, fileName, parentFolderId, existingFileId);
   }
 };

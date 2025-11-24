@@ -1,13 +1,23 @@
 import { google } from 'googleapis';
 
-const SCOPES = ['https://www.googleapis.com/auth/drive.file'];
+const SCOPES = ['https://www.googleapis.com/auth/drive']; // Broadened scope slightly to ensure visibility
 const ROOT_FOLDER_NAME = 'TravelBook';
 
-// Initialize Auth using Service Account from Env Vars
+// Helper: robust key cleaning for Vercel Env Vars
+const getCleanPrivateKey = (key) => {
+  if (!key) return '';
+  // Remove wrapping quotes if present (common copy-paste error)
+  let cleanKey = key.replace(/^"|"$/g, '');
+  // Fix escaped newlines
+  cleanKey = cleanKey.replace(/\\n/g, '\n');
+  return cleanKey;
+};
+
+// Initialize Auth
 const auth = new google.auth.JWT(
   process.env.GOOGLE_CLIENT_EMAIL,
   null,
-  (process.env.GOOGLE_PRIVATE_KEY || '').replace(/\\n/g, '\n'), // Fix newline issues in Vercel env vars
+  getCleanPrivateKey(process.env.GOOGLE_PRIVATE_KEY),
   SCOPES
 );
 
@@ -32,20 +42,31 @@ export default async function handler(req, res) {
 
   try {
     // 1. Helper: Find the Root 'TravelBook' Folder
-    // The Service Account must have access to this folder (Shared by you)
     const getRootId = async () => {
+      // Vital: supportsAllDrives=true allows the bot to see folders shared with it
       const q = `name = '${ROOT_FOLDER_NAME}' and mimeType = 'application/vnd.google-apps.folder' and trashed = false`;
-      const response = await drive.files.list({ q, fields: 'files(id, name)' });
+      const response = await drive.files.list({ 
+        q, 
+        fields: 'files(id, name)',
+        supportsAllDrives: true, 
+        includeItemsFromAllDrives: true 
+      });
+      
       if (response.data.files.length > 0) {
         return response.data.files[0].id;
       }
-      throw new Error(`Root folder '${ROOT_FOLDER_NAME}' not found. Please share it with the service account email.`);
+      return null;
     };
 
     // 2. Helper: Find or Create User Folder
     const getUserFolderId = async (rootId, user) => {
       const q = `name = '${user}' and '${rootId}' in parents and mimeType = 'application/vnd.google-apps.folder' and trashed = false`;
-      const response = await drive.files.list({ q, fields: 'files(id, name)' });
+      const response = await drive.files.list({ 
+        q, 
+        fields: 'files(id, name)',
+        supportsAllDrives: true, 
+        includeItemsFromAllDrives: true 
+      });
       
       if (response.data.files.length > 0) {
         return response.data.files[0].id;
@@ -58,7 +79,8 @@ export default async function handler(req, res) {
           mimeType: 'application/vnd.google-apps.folder',
           parents: [rootId]
         },
-        fields: 'id'
+        fields: 'id',
+        supportsAllDrives: true
       });
       return createRes.data.id;
     };
@@ -70,11 +92,22 @@ export default async function handler(req, res) {
       // A. LIST Files for a User
       if (action === 'list' && username) {
         const rootId = await getRootId();
+        
+        if (!rootId) {
+            // Specific Error for Frontend
+            return res.status(404).json({ 
+                error: 'ROOT_FOLDER_NOT_FOUND', 
+                serviceAccountEmail: process.env.GOOGLE_CLIENT_EMAIL 
+            });
+        }
+
         const userFolderId = await getUserFolderId(rootId, username);
         
         const fileListRes = await drive.files.list({
           q: `'${userFolderId}' in parents and mimeType = 'application/json' and trashed = false`,
           fields: 'files(id, name)',
+          supportsAllDrives: true,
+          includeItemsFromAllDrives: true
         });
 
         return res.status(200).json({
@@ -87,7 +120,8 @@ export default async function handler(req, res) {
       if (action === 'get' && fileId) {
         const fileRes = await drive.files.get({
           fileId: fileId,
-          alt: 'media'
+          alt: 'media',
+          supportsAllDrives: true
         });
         return res.status(200).json(fileRes.data);
       }
@@ -95,7 +129,7 @@ export default async function handler(req, res) {
 
     if (req.method === 'POST') {
       // C. SAVE (Create or Update)
-      const { data } = req.body; // Expecting JSON body with { data: ... }
+      const { data } = req.body; 
       
       if (!data) return res.status(400).json({ error: 'No data provided' });
 
@@ -103,10 +137,12 @@ export default async function handler(req, res) {
       if (fileId) {
         await drive.files.update({
           fileId: fileId,
+          requestBody: {}, // metadata updates if any
           media: {
             mimeType: 'application/json',
             body: JSON.stringify(data, null, 2)
-          }
+          },
+          supportsAllDrives: true
         });
         return res.status(200).json({ id: fileId });
       }
@@ -124,7 +160,8 @@ export default async function handler(req, res) {
             mimeType: 'application/json',
             body: JSON.stringify(data, null, 2)
           },
-          fields: 'id'
+          fields: 'id',
+          supportsAllDrives: true
         });
         return res.status(200).json({ id: createRes.data.id });
       }
@@ -134,6 +171,7 @@ export default async function handler(req, res) {
 
   } catch (error) {
     console.error('Drive API Error:', error);
-    return res.status(500).json({ error: error.message });
+    // Return specific error message to help debugging
+    return res.status(500).json({ error: error.message, stack: error.stack });
   }
 }
