@@ -274,6 +274,15 @@ const App: React.FC = () => {
     setIsAddingNew(false);
   };
 
+  const handleRegionChange = (newRegion: string) => {
+    setItinerary(prev => prev.map(day => {
+      if (day.dayId === currentDayId) {
+        return { ...day, region: newRegion };
+      }
+      return day;
+    }));
+  };
+
   // --- Render Views ---
 
   if (appState === 'select_user') {
@@ -349,6 +358,7 @@ const App: React.FC = () => {
             region={currentDay.region}
             dateStr={currentDay.dateStr}
             isOfflineMode={isOfflineMode}
+            onRegionChange={handleRegionChange}
           />
 
           <main className="max-w-xl mx-auto px-5 py-8 relative min-h-[50vh]">

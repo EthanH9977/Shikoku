@@ -1,6 +1,6 @@
 
 import React, { useEffect, useState } from 'react';
-import { CloudSun, RefreshCw, Cloud, HardDrive } from 'lucide-react';
+import { CloudSun, RefreshCw, Cloud, HardDrive, Edit2 } from 'lucide-react';
 import { fetchWeatherForLocation, WeatherResult } from '../services/geminiService';
 
 interface HeroProps {
@@ -8,11 +8,14 @@ interface HeroProps {
   region: string;
   dateStr: string;
   isOfflineMode: boolean;
+  onRegionChange?: (newRegion: string) => void;
 }
 
-const Hero: React.FC<HeroProps> = ({ dayStr, region, dateStr, isOfflineMode }) => {
+const Hero: React.FC<HeroProps> = ({ dayStr, region, dateStr, isOfflineMode, onRegionChange }) => {
   const [weather, setWeather] = useState<WeatherResult | null>(null);
   const [loading, setLoading] = useState(false);
+  const [isEditingRegion, setIsEditingRegion] = useState(false);
+  const [editedRegion, setEditedRegion] = useState(region);
 
   const getWeather = async () => {
     setLoading(true);
@@ -25,6 +28,26 @@ const Hero: React.FC<HeroProps> = ({ dayStr, region, dateStr, isOfflineMode }) =
     getWeather();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [region, dateStr]);
+
+  useEffect(() => {
+    setEditedRegion(region);
+  }, [region]);
+
+  const handleRegionSave = () => {
+    if (editedRegion.trim() && onRegionChange) {
+      onRegionChange(editedRegion.trim());
+      setIsEditingRegion(false);
+    }
+  };
+
+  const handleRegionKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      handleRegionSave();
+    } else if (e.key === 'Escape') {
+      setEditedRegion(region);
+      setIsEditingRegion(false);
+    }
+  };
 
   // Parse region to remove english part for cleaner look
   const jpRegion = region.split(' ')[0];
@@ -47,10 +70,34 @@ const Hero: React.FC<HeroProps> = ({ dayStr, region, dateStr, isOfflineMode }) =
             <span className="text-[10px] font-medium tracking-widest bg-white/10 px-1.5 py-0.5 rounded text-indigo-100">{dayStr}</span>
             <span className="text-[10px] text-indigo-200">{dateStr}</span>
           </div>
-          <h1 className="text-3xl font-bold tracking-tight text-white leading-none">
-            {jpRegion}
-          </h1>
-          {enRegion && (
+
+          {isEditingRegion ? (
+            <div className="flex items-center gap-2">
+              <input
+                type="text"
+                value={editedRegion}
+                onChange={(e) => setEditedRegion(e.target.value)}
+                onKeyDown={handleRegionKeyDown}
+                onBlur={handleRegionSave}
+                autoFocus
+                className="text-3xl font-bold tracking-tight text-shikoku-indigo bg-white px-2 py-1 rounded-lg leading-none outline-none focus:ring-2 focus:ring-shikoku-gold"
+              />
+            </div>
+          ) : (
+            <div className="flex items-center gap-2 group">
+              <h1 className="text-3xl font-bold tracking-tight text-white leading-none">
+                {jpRegion}
+              </h1>
+              <button
+                onClick={() => setIsEditingRegion(true)}
+                className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-white/10 rounded"
+              >
+                <Edit2 size={16} />
+              </button>
+            </div>
+          )}
+
+          {enRegion && !isEditingRegion && (
             <p className="text-indigo-200 text-[10px] tracking-wider uppercase opacity-60 mt-0.5 font-medium">
               {enRegion}
             </p>
@@ -63,8 +110,8 @@ const Hero: React.FC<HeroProps> = ({ dayStr, region, dateStr, isOfflineMode }) =
           {/* Vertical Badge (Left of Weather) */}
           {weather && !loading && (
             <div className={`flex flex-col items-center justify-center py-1 px-0.5 rounded border leading-none ${weather.source === 'forecast'
-              ? 'bg-green-500/10 border-green-400/30 text-green-100'
-              : 'bg-amber-500/10 border-amber-400/30 text-amber-100'
+                ? 'bg-green-500/10 border-green-400/30 text-green-100'
+                : 'bg-amber-500/10 border-amber-400/30 text-amber-100'
               }`}>
               <span className="text-[9px] font-medium writing-vertical-rl tracking-widest opacity-80">
                 {weather.source === 'forecast' ? '預報' : '歷史'}
@@ -104,8 +151,8 @@ const Hero: React.FC<HeroProps> = ({ dayStr, region, dateStr, isOfflineMode }) =
 
         {/* Connection Status Indicator */}
         <div className={`flex items-center gap-1 px-2 py-0.5 rounded-full border text-[9px] font-bold ${isOfflineMode
-          ? 'bg-orange-500/20 text-orange-200 border-orange-500/30'
-          : 'bg-emerald-500/20 text-emerald-200 border-emerald-500/30'
+            ? 'bg-orange-500/20 text-orange-200 border-orange-500/30'
+            : 'bg-emerald-500/20 text-emerald-200 border-emerald-500/30'
           }`}>
           {isOfflineMode ? <HardDrive size={10} /> : <Cloud size={10} />}
           <span>{isOfflineMode ? 'Local' : '雲端'}</span>
