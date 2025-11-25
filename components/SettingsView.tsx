@@ -28,7 +28,7 @@ const SettingsView: React.FC<SettingsViewProps> = ({
   isOfflineMode,
   onAddDay,
   onRemoveDay,
-  onRemoveDay,
+
   totalDays,
   onAdmin
 }) => {
