@@ -1,4 +1,4 @@
-# Shikoku Project Setup Guide
+# JourneyXBook 專案設定指南
 
 為了達成您的目標 (React App + Google Drive 儲存 + Vercel 部署)，我們需要完成以下設定。
 

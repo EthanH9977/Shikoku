@@ -7,7 +7,7 @@ import InfoModal from './components/InfoModal';
 import UserModal from './components/UserModal';
 import FileSelectorModal from './components/FileSelectorModal';
 import SettingsView from './components/SettingsView';
-import { SHIKOKU_DEMO_DATA, generateEmptyItinerary } from './constants';
+import { DEMO_DATA, generateEmptyItinerary } from './constants';
 import { ItineraryItem, DayItinerary, EventType } from './types';
 import { Plus, Loader2 } from 'lucide-react';
 import {
@@ -26,7 +26,7 @@ type AppState = 'select_user' | 'select_file' | 'loading_file' | 'ready';
 
 const App: React.FC = () => {
   // Data State
-  const [itinerary, setItinerary] = useState<DayItinerary[]>(SHIKOKU_DEMO_DATA);
+  const [itinerary, setItinerary] = useState<DayItinerary[]>(DEMO_DATA);
   const [currentDayId, setCurrentDayId] = useState<number>(1);
 
   // App Flow State

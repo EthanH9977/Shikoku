@@ -21,13 +21,13 @@ export const getIconForType = (type: EventType) => {
 export const generateEmptyItinerary = (days: number, startDateStr: string): DayItinerary[] => {
   const result: DayItinerary[] = [];
   const startDate = new Date(startDateStr);
-  
+
   const weekDays = ["(日)", "(一)", "(二)", "(三)", "(四)", "(五)", "(六)"];
 
   for (let i = 0; i < days; i++) {
     const currentDate = new Date(startDate);
     currentDate.setDate(startDate.getDate() + i);
-    
+
     // Format YYYY-MM-DD
     const yyyy = currentDate.getFullYear();
     const mm = String(currentDate.getMonth() + 1).padStart(2, '0');
@@ -48,7 +48,7 @@ export const generateEmptyItinerary = (days: number, startDateStr: string): DayI
   return result;
 };
 
-export const SHIKOKU_DEMO_DATA: DayItinerary[] = [
+export const DEMO_DATA: DayItinerary[] = [
   {
     dayId: 1,
     dateStr: "2026-02-13",

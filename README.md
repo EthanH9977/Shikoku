@@ -4,9 +4,9 @@
 
 # Run and deploy your AI Studio app
 
-# Shikoku Travel Log
+# JourneyXBook
 
-A smart, cloud-synced travel itinerary planner.
+一個智能、雲端同步的旅遊行程規劃工具。
 
 ## 🚀 Firebase Setup (Important!)
 
