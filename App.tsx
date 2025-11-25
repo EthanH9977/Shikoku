@@ -40,6 +40,7 @@ const App: React.FC = () => {
   const [currentFileName, setCurrentFileName] = useState<string | null>(null);
   const [availableFiles, setAvailableFiles] = useState<FirebaseFile[]>([]);
   const [driveLoading, setDriveLoading] = useState(false);
+  const [deeplinkTarget, setDeeplinkTarget] = useState<{ user: string; fileId?: string | null } | null>(null);
 
   // Modal states
   const [editingItem, setEditingItem] = useState<ItineraryItem | null>(null);
@@ -53,6 +54,15 @@ const App: React.FC = () => {
     const cachedUser = localStorage.getItem(USER_KEY);
     if (cachedUser) {
       handleUserLogin(cachedUser);
+    }
+  }, []);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const userParam = params.get('user');
+    if (userParam) {
+      setDeeplinkTarget({ user: userParam, fileId: params.get('file') });
+      handleUserLogin(userParam);
     }
   }, []);
 
@@ -97,6 +107,22 @@ const App: React.FC = () => {
       setAppState('select_file');
     }
   };
+
+  useEffect(() => {
+    if (
+      !deeplinkTarget ||
+      !deeplinkTarget.fileId ||
+      availableFiles.length === 0 ||
+      currentUser !== deeplinkTarget.user
+    ) {
+      return;
+    }
+    const target = availableFiles.find(file => file.id === deeplinkTarget.fileId);
+    if (target) {
+      handleSelectFile(target.id, target.name);
+      setDeeplinkTarget(null);
+    }
+  }, [deeplinkTarget, availableFiles, currentUser]);
 
   const handleCreateFile = async (fileName: string, days: number, startDate: string) => {
     setDriveLoading(true);

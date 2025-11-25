@@ -40,7 +40,7 @@ const EditModal: React.FC<EditModalProps> = ({ item, isNew = false, onClose, onS
 
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4 bg-stone-900/60 backdrop-blur-sm animate-in fade-in duration-200">
-      <div 
+      <div
         className="bg-white w-full sm:max-w-md h-[90vh] sm:h-auto sm:max-h-[85vh] sm:rounded-2xl rounded-t-2xl shadow-2xl overflow-hidden flex flex-col animate-in slide-in-from-bottom-10 duration-300"
         onClick={(e) => e.stopPropagation()}
       >
@@ -52,7 +52,7 @@ const EditModal: React.FC<EditModalProps> = ({ item, isNew = false, onClose, onS
             <X size={20} />
           </button>
         </div>
-        
+
         <form onSubmit={handleSubmit} className="p-6 space-y-5 overflow-y-auto flex-1 overscroll-contain">
           <div className="grid grid-cols-2 gap-4">
             <div>
@@ -133,23 +133,12 @@ const EditModal: React.FC<EditModalProps> = ({ item, isNew = false, onClose, onS
               className="w-full p-3 bg-stone-50 border border-stone-200 rounded-xl focus:ring-2 focus:ring-shikoku-indigo focus:border-shikoku-indigo focus:outline-none transition-all resize-none"
             />
           </div>
-          
-          <div>
-            <label className="block text-xs font-bold text-stone-500 mb-1">預算 (JPY)</label>
-            <input
-              type="number"
-              name="cost"
-              placeholder="0"
-              value={formData.cost || ''}
-              onChange={handleChange}
-              className="w-full p-3 bg-stone-50 border border-stone-200 rounded-xl focus:ring-2 focus:ring-shikoku-indigo focus:border-shikoku-indigo focus:outline-none transition-all"
-            />
-          </div>
+
         </form>
 
         <div className="p-4 border-t border-stone-100 bg-stone-50 flex gap-3">
           {!isNew && (
-            <button 
+            <button
               type="button"
               onClick={() => onDelete(formData.id)}
               className="px-4 py-3 bg-white border border-red-200 text-red-500 font-bold rounded-xl hover:bg-red-50 transition-colors flex items-center justify-center"
@@ -157,8 +146,8 @@ const EditModal: React.FC<EditModalProps> = ({ item, isNew = false, onClose, onS
               <Trash2 size={20} />
             </button>
           )}
-          
-          <button 
+
+          <button
             onClick={handleSubmit}
             className="flex-1 py-3 bg-shikoku-indigo text-white font-bold rounded-xl shadow-lg shadow-indigo-200 hover:bg-indigo-800 transition-all flex items-center justify-center"
           >

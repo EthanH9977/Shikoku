@@ -24,7 +24,7 @@ export interface ItineraryItem {
   locationUrl?: string; // Google Maps URL
   type: EventType;
   description: string;
-  cost?: number; // In JPY
+
   details?: DetailedInfo[]; // For the modal (e.g., flight ticket, booking code)
 }
 
